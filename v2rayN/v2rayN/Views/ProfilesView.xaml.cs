@@ -353,7 +353,7 @@ public partial class ProfilesView
                         }
                         if (item.Name.Equals("IpInfo", StringComparison.CurrentCultureIgnoreCase))
                         {
-                            item2.Visibility = _config.SpeedTestItem.IPAPIUrl.IsNotEmpty() && !_config.UiItem.HideColumnIpInfo ? Visibility.Visible : Visibility.Hidden;
+                            item2.Visibility = _config.UiItem.HideColumnIpInfo ? Visibility.Hidden : Visibility.Visible;
                         }
                     }
                 }
