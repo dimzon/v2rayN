@@ -244,6 +244,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
                 catch (Exception ex)
                 {
                     Logging.SaveLog(_tag, ex);
+                    await MarkCompletedAsync(completedIds, item.IndexId);
                 }
             });
 
@@ -337,6 +338,7 @@ try
                 catch (Exception ex)
                 {
                     Logging.SaveLog(_tag, ex);
+                    await MarkCompletedAsync(completedIds, it.IndexId);
                 }
             });
         }
@@ -428,6 +430,7 @@ try
                 catch (Exception ex)
                 {
                     Logging.SaveLog(_tag, ex);
+                    await MarkCompletedAsync(completedIds, it.IndexId);
                 }
             });
         }
@@ -472,6 +475,7 @@ try
                 if (processService is null)
                 {
                     await UpdateFunc(it.IndexId, "", ResUI.FailedToRunCore);
+                    await MarkCompletedAsync(completedIds, it.IndexId);
                     return;
                 }
 
@@ -676,6 +680,11 @@ try
 
     private async Task UpdateProgressAsync(int completed, bool isRunning)
     {
+        //only the start and the end are logged, per profile events would flood the log
+        if (completed <= 0)
+        {
+            Logging.SaveLog($"{_tag},progress {(isRunning ? "start" : "finished")} {_totalCount} profiles");
+        }
         await _progressFunc?.Invoke(new()
         {
             Total = _totalCount,
