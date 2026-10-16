@@ -1075,8 +1075,8 @@ public static class ConfigHandler
                 EServerColName.StreamSecurity => lstProfile.OrderBy(t => t.StreamSecurity).ToList(),
                 EServerColName.DelayVal => lstProfile.OrderBy(t => t.Delay).ToList(),
                 EServerColName.SpeedVal => lstProfile.OrderBy(t => t.Speed).ToList(),
-                EServerColName.IpInfo => lstProfile.OrderBy(t => t.IpInfo).ToList(),
-                EServerColName.GoogleRegion => lstProfile.OrderBy(t => t.GoogleRegion).ToList(),
+                EServerColName.IpInfo => SortByTestResult(lstProfile, t => t.IpInfo, asc),
+                EServerColName.GoogleRegion => SortByTestResult(lstProfile, t => t.GoogleRegion, asc),
                 EServerColName.SubRemarks => lstProfile.OrderBy(t => t.Subid).ToList(),
                 EServerColName.TodayDown => lstProfile.OrderBy(t => t.TodayDown).ToList(),
                 EServerColName.TodayUp => lstProfile.OrderBy(t => t.TodayUp).ToList(),
@@ -1097,8 +1097,8 @@ public static class ConfigHandler
                 EServerColName.StreamSecurity => lstProfile.OrderByDescending(t => t.StreamSecurity).ToList(),
                 EServerColName.DelayVal => lstProfile.OrderByDescending(t => t.Delay).ToList(),
                 EServerColName.SpeedVal => lstProfile.OrderByDescending(t => t.Speed).ToList(),
-                EServerColName.IpInfo => lstProfile.OrderByDescending(t => t.IpInfo).ToList(),
-                EServerColName.GoogleRegion => lstProfile.OrderByDescending(t => t.GoogleRegion).ToList(),
+                EServerColName.IpInfo => SortByTestResult(lstProfile, t => t.IpInfo, asc),
+                EServerColName.GoogleRegion => SortByTestResult(lstProfile, t => t.GoogleRegion, asc),
                 EServerColName.SubRemarks => lstProfile.OrderByDescending(t => t.Subid).ToList(),
                 EServerColName.TodayDown => lstProfile.OrderByDescending(t => t.TodayDown).ToList(),
                 EServerColName.TodayUp => lstProfile.OrderByDescending(t => t.TodayUp).ToList(),
@@ -1137,6 +1137,39 @@ public static class ConfigHandler
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// Orders profiles by a test result column and keeps the rows without a result
+    /// (not tested yet, failed, none) together at the end, in both directions.
+    /// This is a deliberate choice, not an oversight: sorting by delay and by speed already
+    /// pushes the failed rows (Delay &lt;= 0, Speed &lt;= 0) to the end below, and blank or
+    /// "none" results are the very same kind of missing measurement. Desktop grids (Excel,
+    /// Google Sheets, file managers) follow the same rule: empty cells stay at the bottom no
+    /// matter which direction is applied, so the rows without data do not jump to the top when
+    /// the user sorts descending.
+    /// </summary>
+    private static List<ProfileItemModel> SortByTestResult(List<ProfileItemModel> lstProfile, Func<ProfileItemModel, string> selector, bool asc)
+    {
+        var comparer = StringComparer.OrdinalIgnoreCase;
+        var withResult = lstProfile.Where(t => IsEmptyTestResult(selector(t)) == false);
+        var withoutResult = lstProfile.Where(t => IsEmptyTestResult(selector(t)));
+
+        var ordered = asc
+            ? withResult.OrderBy(selector, comparer)
+            : withResult.OrderByDescending(selector, comparer);
+
+        return ordered.Concat(withoutResult).ToList();
+    }
+
+    private static bool IsEmptyTestResult(string? value)
+    {
+        if (value.IsNullOrEmpty())
+        {
+            return true;
+        }
+        return value.Equals(Global.None, StringComparison.CurrentCultureIgnoreCase)
+            || value.Equals(ResUI.SpeedtestingSkip, StringComparison.CurrentCultureIgnoreCase);
     }
 
     /// <summary>
