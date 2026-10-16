@@ -1025,7 +1025,8 @@ public static class ConfigHandler
     /// <param name="colName">Column name to sort by</param>
     /// <param name="asc">Sort in ascending order if true, descending if false</param>
     /// <returns>0 if successful, -1 if failed</returns>
-    public static async Task<int> SortServers(Config config, string subId, string colName, bool asc)
+    public static async Task<int> SortServers(Config config, string subId, string colName, bool asc,
+        Dictionary<string, string>? googleRegions = null)
     {
         var lstModel = await AppManager.Instance.ProfileModels(subId, "");
         if (lstModel.Count <= 0)
@@ -1053,6 +1054,7 @@ public static class ConfigHandler
                               Speed = t33?.Speed ?? 0,
                               Sort = t33?.Sort ?? 0,
                               IpInfo = t33?.IpInfo ?? string.Empty,
+                              GoogleRegion = googleRegions?.GetValueOrDefault(t.IndexId, string.Empty) ?? string.Empty,
                               TodayDown = (t22?.TodayDown ?? 0).ToString("D16"),
                               TodayUp = (t22?.TodayUp ?? 0).ToString("D16"),
                               TotalDown = (t22?.TotalDown ?? 0).ToString("D16"),

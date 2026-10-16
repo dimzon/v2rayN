@@ -17,6 +17,7 @@ public partial class ProfilesViewModel : MyReactiveObject
 
     private string _serverFilter = string.Empty;
     private readonly Dictionary<string, bool> _dicHeaderSort = new();
+    private readonly Dictionary<string, string> _googleRegionCache = new();
     private SpeedtestService? _speedtestService;
     private string? _pendingSelectIndexId;
 
@@ -310,7 +311,8 @@ public partial class ProfilesViewModel : MyReactiveObject
         }
         if (result.GoogleRegion.IsNotEmpty())
         {
-            item.GoogleRegion = result.GoogleRegion ?? string.Empty;
+            _googleRegionCache[item.IndexId] = result.GoogleRegion;
+            item.GoogleRegion = result.GoogleRegion;
         }
         await Task.CompletedTask;
     }
@@ -441,6 +443,7 @@ public partial class ProfilesViewModel : MyReactiveObject
                         DelayVal = t33?.Delay != 0 ? $"{t33?.Delay}" : string.Empty,
                         SpeedVal = t33?.Speed > 0 ? $"{t33?.Speed}" : t33?.Message ?? string.Empty,
                         IpInfo = t33?.IpInfo ?? string.Empty,
+                        GoogleRegion = _googleRegionCache.GetValueOrDefault(t.IndexId, string.Empty),
                         TodayDown = t22 == null ? "" : Utils.HumanFy(t22.TodayDown),
                         TodayUp = t22 == null ? "" : Utils.HumanFy(t22.TodayUp),
                         TotalDown = t22 == null ? "" : Utils.HumanFy(t22.TotalDown),
@@ -655,7 +658,7 @@ public partial class ProfilesViewModel : MyReactiveObject
 
         _dicHeaderSort.TryAdd(colName, true);
         _dicHeaderSort.TryGetValue(colName, out var asc);
-        if (await ConfigHandler.SortServers(_config, _config.SubIndexId, colName, asc) != 0)
+        if (await ConfigHandler.SortServers(_config, _config.SubIndexId, colName, asc, _googleRegionCache) != 0)
         {
             return;
         }
