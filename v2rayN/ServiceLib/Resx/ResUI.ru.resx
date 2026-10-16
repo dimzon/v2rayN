@@ -501,6 +501,9 @@
   <data name="menuCloudflareTraceServer" xml:space="preserve">
     <value>Тест реальной задержки (Cloudflare)</value>
   </data>
+  <data name="menuGoogleRegionServer" xml:space="preserve">
+    <value>Тест региона Google</value>
+  </data>
   <data name="menuSortServerResult" xml:space="preserve">
     <value>Сортировка по результату теста</value>
   </data>
@@ -1793,6 +1796,9 @@
   </data>
   <data name="LvTestIpInfo" xml:space="preserve">
     <value>Информация об IP</value>
+  </data>
+  <data name="LvTestGoogleRegion" xml:space="preserve">
+    <value>Регион Google</value>
   </data>
   <data name="menuNewUpdate" xml:space="preserve">
     <value>Доступно обновление</value>

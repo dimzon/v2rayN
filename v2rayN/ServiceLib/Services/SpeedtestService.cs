@@ -99,11 +99,9 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
                     break;
 
                 case ESpeedActionType.Realping:
-                    await RunRealPingBatchAsync(lstSelected, completedIds, 0, null, ct);
-                    break;
-
                 case ESpeedActionType.CloudflareTrace:
-                    await RunRealPingBatchAsync(lstSelected, completedIds, 0, Global.CloudflareTraceUrl, ct);
+                case ESpeedActionType.GoogleRegion:
+                    await RunPingBatchAsync(actionType, lstSelected, completedIds, 0, ct);
                     break;
 
                 case ESpeedActionType.UdpTest:
@@ -111,11 +109,11 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
                     break;
 
                 case ESpeedActionType.Speedtest:
-                    await RunMixedTestAsync(lstSelected, completedIds, 1, true, null, ct);
+                    await RunMixedTestAsync(actionType, lstSelected, completedIds, 1, true, null, ct);
                     break;
 
                 case ESpeedActionType.Mixedtest:
-                    await RunMixedTestAsync(lstSelected, completedIds, _config.SpeedTestItem.MixedConcurrencyCount, true,
+                    await RunMixedTestAsync(actionType, lstSelected, completedIds, _config.SpeedTestItem.MixedConcurrencyCount, true,
                         null, ct);
                     break;
             }
@@ -192,6 +190,11 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
                     await UpdateFunc(it.IndexId, message, "");
                     break;
 
+                case ESpeedActionType.GoogleRegion:
+                    await UpdateFunc(it.IndexId, message, "");
+                    await UpdateGoogleRegionFunc(it.IndexId, message);
+                    break;
+
                 case ESpeedActionType.Speedtest:
                     await UpdateFunc(it.IndexId, "", message);
                     break;
@@ -243,9 +246,10 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         }
     }
 
-    private async Task RunRealPingBatchAsync(List<ServerTestItem> lstSelected,
-        ConcurrentDictionary<string, byte> completedIds, int pageSize = 0, string? pingUrl = null, CancellationToken ct = default)
+    private async Task RunPingBatchAsync(ESpeedActionType actionType, List<ServerTestItem> lstSelected,
+        ConcurrentDictionary<string, byte> completedIds, int pageSize = 0, CancellationToken ct = default)
     {
+        var pingUrl = actionType == ESpeedActionType.CloudflareTrace ? Global.CloudflareTraceUrl : null;
         if (pageSize <= 0)
         {
             pageSize = Math.Min(lstSelected.Count, _speedTestPageSize);
@@ -255,7 +259,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         List<ServerTestItem> lstFailed = [];
         foreach (var lst in lstTest)
         {
-            var ret = await RunRealPingAsync(lst, completedIds, pingUrl, ct);
+            var ret = await RunPingAsync(actionType, lst, completedIds, pingUrl, ct);
             if (ret == false)
             {
                 lstFailed.AddRange(lst);
@@ -273,16 +277,16 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
 
             if (pageSizeNext > _config.SpeedTestItem.MixedConcurrencyCount)
             {
-                await RunRealPingBatchAsync(lstFailed, completedIds, pageSizeNext, pingUrl, ct);
+                await RunPingBatchAsync(actionType, lstFailed, completedIds, pageSizeNext, ct);
             }
             else
             {
-                await RunMixedTestAsync(lstSelected, completedIds, _config.SpeedTestItem.MixedConcurrencyCount, false, pingUrl, ct);
+                await RunMixedTestAsync(actionType, lstSelected, completedIds, _config.SpeedTestItem.MixedConcurrencyCount, false, pingUrl, ct);
             }
         }
     }
 
-    private async Task<bool> RunRealPingAsync(List<ServerTestItem> selecteds,
+    private async Task<bool> RunPingAsync(ESpeedActionType actionType, List<ServerTestItem> selecteds,
         ConcurrentDictionary<string, byte> completedIds, string? pingUrl = null, CancellationToken ct = default)
     {
         ProcessService processService = null;
@@ -310,9 +314,16 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
                     return;
                 }
 
-                try
+try
                 {
-await DoRealPing(it, completedIds, pingUrl, innerCt);
+                    if (actionType == ESpeedActionType.GoogleRegion)
+                    {
+                        await DoGoogleRegion(it, completedIds, innerCt);
+                    }
+                    else
+                    {
+                        await DoRealPing(it, completedIds, pingUrl, innerCt);
+                    }
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
@@ -433,7 +444,7 @@ await DoRealPing(it, completedIds, pingUrl, innerCt);
         return true;
     }
 
-    private async Task RunMixedTestAsync(List<ServerTestItem> selecteds,
+    private async Task RunMixedTestAsync(ESpeedActionType actionType, List<ServerTestItem> selecteds,
         ConcurrentDictionary<string, byte> completedIds, int concurrencyCount, bool blSpeedTest,
         string? pingUrl = null, CancellationToken ct = default)
     {
@@ -461,7 +472,9 @@ await DoRealPing(it, completedIds, pingUrl, innerCt);
 
                 await Task.Delay(1000, innerCt);
 
-                var delay = await DoRealPing(it, completedIds, pingUrl, innerCt);
+                var delay = actionType == ESpeedActionType.GoogleRegion
+                    ? await DoGoogleRegion(it, completedIds, innerCt)
+                    : await DoRealPing(it, completedIds, pingUrl, innerCt);
                 if (blSpeedTest)
                 {
                     if (delay > 0)
@@ -513,6 +526,23 @@ await DoRealPing(it, completedIds, pingUrl, innerCt);
         {
             await UpdateIpInfoFunc(it.IndexId, ResUI.SpeedtestingSkip);
         }
+
+        completedIds.TryAdd(it.IndexId, 0);
+        return responseTime;
+    }
+
+    private async Task<int> DoGoogleRegion(ServerTestItem it,
+        ConcurrentDictionary<string, byte> completedIds, CancellationToken ct = default)
+    {
+        var webProxy = new WebProxy($"socks5://{Global.Loopback}:{it.Port}");
+        var regionResult = await ConnectionHandler.GetGoogleRegion(webProxy, ct);
+        var responseTime = regionResult.Delay;
+
+        ProfileExManager.Instance.SetTestDelay(it.IndexId, responseTime);
+        await UpdateFunc(it.IndexId, responseTime.ToString());
+
+        var region = regionResult.Region.IsNotEmpty() ? regionResult.Region : Global.None;
+        await UpdateGoogleRegionFunc(it.IndexId, region);
 
         completedIds.TryAdd(it.IndexId, 0);
         return responseTime;
@@ -626,5 +656,10 @@ await DoRealPing(it, completedIds, pingUrl, innerCt);
     private async Task UpdateIpInfoFunc(string indexId, string ip)
     {
         await _updateFunc?.Invoke(new() { IndexId = indexId, IpInfo = ip });
+    }
+
+    private async Task UpdateGoogleRegionFunc(string indexId, string googleRegion)
+    {
+        await _updateFunc?.Invoke(new() { IndexId = indexId, GoogleRegion = googleRegion });
     }
 }

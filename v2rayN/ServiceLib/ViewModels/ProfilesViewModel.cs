@@ -71,6 +71,7 @@ public partial class ProfilesViewModel : MyReactiveObject
     public ReactiveCommand<RxVoid, RxVoid> TcpingServerCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> RealPingServerCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> CloudflareTraceServerCmd { get; }
+    public ReactiveCommand<RxVoid, RxVoid> GoogleRegionServerCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> UdpTestServerCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> SpeedServerCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> SortServerResultCmd { get; }
@@ -191,6 +192,10 @@ public partial class ProfilesViewModel : MyReactiveObject
         {
             await ServerSpeedtest(ESpeedActionType.CloudflareTrace);
         }, canEditRemove);
+        GoogleRegionServerCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            await ServerSpeedtest(ESpeedActionType.GoogleRegion);
+        }, canEditRemove);
         UdpTestServerCmd = ReactiveCommand.CreateFromTask(async () =>
         {
             await ServerSpeedtest(ESpeedActionType.UdpTest);
@@ -302,6 +307,10 @@ public partial class ProfilesViewModel : MyReactiveObject
         if (result.IpInfo.IsNotEmpty())
         {
             item.IpInfo = result.IpInfo ?? string.Empty;
+        }
+        if (result.GoogleRegion.IsNotEmpty())
+        {
+            item.GoogleRegion = result.GoogleRegion ?? string.Empty;
         }
         await Task.CompletedTask;
     }

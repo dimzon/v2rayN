@@ -45,6 +45,23 @@ public class ConnectionHandlerTests
         await (IsTrace(url) == expected).Should().BeTrue();
     }
 
+    [Test]
+    public async Task ParseGoogleRegion_ShouldReadCountryCode()
+    {
+        await ParseRegion("""{"GAPI_HOST":"https://apis.google.com","GAPI_LOCALE":"fi_FI","GL":"FI","GOOGLE_FEEDBACK_PRODUCT_ID":"59"}""")
+            .Should().BeEqualTo("FI");
+    }
+
+    [Test]
+    [Arguments("")]
+    [Arguments("no region here")]
+    [Arguments("{\"GL\": \"\"}")]
+    [Arguments("{\"GL\":\"FIN\"}")]
+    public async Task ParseGoogleRegion_ShouldReturnNullWithoutCountryCode(string html)
+    {
+        await ParseRegion(html).Should().BeNull();
+    }
+
     private static IpInfoResult? Parse(string content)
     {
         var method = typeof(ConnectionHandler).GetMethod("ParseCloudflareTrace", BindingFlags.Static | BindingFlags.NonPublic)!;
@@ -55,5 +72,11 @@ public class ConnectionHandlerTests
     {
         var method = typeof(ConnectionHandler).GetMethod("IsCloudflareTraceUrl", BindingFlags.Static | BindingFlags.NonPublic)!;
         return (bool)method.Invoke(null, [url])!;
+    }
+
+    private static string? ParseRegion(string html)
+    {
+        var method = typeof(ConnectionHandler).GetMethod("ParseGoogleRegion", BindingFlags.Static | BindingFlags.NonPublic)!;
+        return (string?)method.Invoke(null, [html]);
     }
 }

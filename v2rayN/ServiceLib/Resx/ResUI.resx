@@ -501,6 +501,9 @@
   <data name="menuCloudflareTraceServer" xml:space="preserve">
     <value>Test real delay (Cloudflare)</value>
   </data>
+  <data name="menuGoogleRegionServer" xml:space="preserve">
+    <value>Test Google region</value>
+  </data>
   <data name="menuSortServerResult" xml:space="preserve">
     <value>Sort by test result</value>
   </data>
@@ -1793,6 +1796,9 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   </data>
   <data name="LvTestIpInfo" xml:space="preserve">
     <value>IP Info</value>
+  </data>
+  <data name="LvTestGoogleRegion" xml:space="preserve">
+    <value>Google Region</value>
   </data>
   <data name="menuNewUpdate" xml:space="preserve">
     <value>New Update</value>

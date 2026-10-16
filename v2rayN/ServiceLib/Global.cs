@@ -174,6 +174,16 @@ public class Global
 
     public const string CloudflareTraceUrl = @"https://1.1.1.1/cdn-cgi/trace";
 
+    /// <summary>
+    /// Mobile YouTube homepage. It carries the same region data as the desktop one but
+    /// is roughly 2.5x lighter, so the region can be read from the first ~64KB only.
+    /// </summary>
+    public const string GoogleRegionTestUrl = @"https://m.youtube.com/";
+
+    public const string MobileUserAgent = @"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+
+    public const int GoogleRegionReadLimit = 128 * 1024;
+
     public static readonly List<string> SpeedPingTestUrls =
     [
         @"https://www.google.com/generate_204",
