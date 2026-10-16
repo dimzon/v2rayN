@@ -21,8 +21,10 @@ public partial class ProfilesViewModel : MyReactiveObject
     /// <summary>
     /// Google runs its own geo database and updates the country it reports for an address
     /// quite often, so there is no point in storing the region in the database: a saved value
-    /// would be outdated long before it is looked at. The result is kept in memory only and is
-    /// reapplied whenever the server list is rebuilt (refresh, sorting, switching sub).
+    /// would be outdated long before it is looked at. The mapping is also heuristic: it depends
+    /// on which accounts are seen from which addresses and is revised as that picture changes.
+    /// The result is therefore kept in memory only and is reapplied whenever the server list is
+    /// rebuilt (refresh, sorting, switching sub).
     /// </summary>
     private readonly Dictionary<string, string> _googleRegionCache = new();
     private SpeedtestService? _speedtestService;
