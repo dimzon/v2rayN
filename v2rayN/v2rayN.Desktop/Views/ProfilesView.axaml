@@ -16,6 +16,7 @@
     mc:Ignorable="d">
     <UserControl.Resources>
         <conv:DelayColorConverter x:Key="DelayColorConverter" />
+        <conv:BoolToVisConverter x:Key="BoolToVisConverter" />
     </UserControl.Resources>
     <Grid>
         <DockPanel>
@@ -97,6 +98,21 @@
                             <PathIcon Data="{StaticResource building_ping}" />
                         </Button.Content>
                     </Button>
+
+                    <StackPanel
+                        Margin="{StaticResource MarginLr4}"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsSpeedtestRunning, Converter={StaticResource BoolToVisConverter}}">
+                        <ProgressBar
+                            Width="150"
+                            Height="4"
+                            Maximum="100"
+                            Value="{Binding SpeedtestProgressValue}" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            HorizontalAlignment="Center"
+                            Text="{Binding SpeedtestProgressText}" />
+                    </StackPanel>
                 </StackPanel>
 
             </WrapPanel>

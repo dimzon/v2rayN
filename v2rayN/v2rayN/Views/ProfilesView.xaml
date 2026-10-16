@@ -97,6 +97,22 @@
                     ToolTip="{x:Static resx:ResUI.menuMixedTestServer}">
                     <materialDesign:PackIcon VerticalAlignment="Center" Kind="Speedometer" />
                 </Button>
+
+                <StackPanel
+                    Margin="{StaticResource MarginLeftRight4}"
+                    VerticalAlignment="Center"
+                    Visibility="{Binding IsSpeedtestRunning, Converter={StaticResource BoolToVisConverter}}">
+                    <ProgressBar
+                        Width="150"
+                        Height="4"
+                        Maximum="100"
+                        Value="{Binding SpeedtestProgressValue}" />
+                    <TextBlock
+                        Margin="0,2,0,0"
+                        HorizontalAlignment="Center"
+                        FontSize="{DynamicResource StdFontSize}"
+                        Text="{Binding SpeedtestProgressText}" />
+                </StackPanel>
             </WrapPanel>
             <DataGrid
                 x:Name="lstProfiles"

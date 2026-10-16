@@ -2,15 +2,17 @@ using ServiceLib.UdpTest;
 
 namespace ServiceLib.Services;
 
-public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateFunc)
+public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateFunc, Func<SpeedTestProgress, Task>? progressFunc = null)
 {
     private static readonly string _tag = "SpeedtestService";
     private readonly Config? _config = config;
     private readonly Func<SpeedTestResult, Task>? _updateFunc = updateFunc;
+    private readonly Func<SpeedTestProgress, Task>? _progressFunc = progressFunc;
     private readonly Lock _runLock = new();
     private readonly List<CancellationTokenSource> _runCtsList = [];
     private readonly int _speedTestPageSize = config.SpeedTestItem.SpeedTestPageSize ?? Global.SpeedTestPageSize;
     private readonly TimeSpan _delayInterval = TimeSpan.FromSeconds(config.SpeedTestItem.SpeedTestDelayInterval ?? 1);
+    private int _totalCount;
 
     public Task RunLoop(ESpeedActionType actionType, List<ProfileItem> selecteds, CancellationToken ct = default)
     {
@@ -74,6 +76,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             finally
             {
                 await UpdateFunc("", ResUI.SpeedtestingCompleted);
+                await UpdateProgressAsync(0, false);
             }
 
             lock (_runLock)
@@ -89,6 +92,8 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
     {
         var lstSelected = await GetClearItem(actionType, selecteds);
         var completedIds = new ConcurrentDictionary<string, byte>();
+        _totalCount = lstSelected.Count;
+        await UpdateProgressAsync(0, true);
 
         try
         {
@@ -230,7 +235,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
 
                     ProfileExManager.Instance.SetTestDelay(item.IndexId, responseTime);
                     await UpdateFunc(item.IndexId, responseTime.ToString());
-                    completedIds.TryAdd(item.IndexId, 0);
+                    await MarkCompletedAsync(completedIds, item.IndexId);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
@@ -310,7 +315,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
                 if (!it.AllowTest)
                 {
                     await UpdateFunc(it.IndexId, ResUI.SpeedtestingSkip);
-                    completedIds.TryAdd(it.IndexId, 0);
+                    await MarkCompletedAsync(completedIds, it.IndexId);
                     return;
                 }
 
@@ -408,7 +413,7 @@ try
                 if (!it.AllowTest)
                 {
                     await UpdateFunc(it.IndexId, ResUI.SpeedtestingSkip);
-                    completedIds.TryAdd(it.IndexId, 0);
+                    await MarkCompletedAsync(completedIds, it.IndexId);
                     return;
                 }
 
@@ -527,7 +532,7 @@ try
             await UpdateIpInfoFunc(it.IndexId, ResUI.SpeedtestingSkip);
         }
 
-        completedIds.TryAdd(it.IndexId, 0);
+        await MarkCompletedAsync(completedIds, it.IndexId);
         return responseTime;
     }
 
@@ -544,7 +549,7 @@ try
         var region = regionResult.Region.IsNotEmpty() ? regionResult.Region : Global.None;
         await UpdateGoogleRegionFunc(it.IndexId, region);
 
-        completedIds.TryAdd(it.IndexId, 0);
+        await MarkCompletedAsync(completedIds, it.IndexId);
         return responseTime;
     }
 
@@ -568,7 +573,7 @@ try
             }
             await UpdateFunc(it.IndexId, "", msg);
         }, linkedCt);
-        completedIds.TryAdd(it.IndexId, 0);
+        await MarkCompletedAsync(completedIds, it.IndexId);
     }
 
     private async Task<int> DoUdpTest(ServerTestItem it,
@@ -579,7 +584,7 @@ try
 
         ProfileExManager.Instance.SetTestDelay(it.IndexId, responseTime);
         await UpdateFunc(it.IndexId, responseTime.ToString());
-        completedIds.TryAdd(it.IndexId, 0);
+        await MarkCompletedAsync(completedIds, it.IndexId);
         return responseTime;
     }
 
@@ -656,6 +661,27 @@ try
     private async Task UpdateIpInfoFunc(string indexId, string ip)
     {
         await _updateFunc?.Invoke(new() { IndexId = indexId, IpInfo = ip });
+    }
+
+    /// <summary>
+    /// Marks a profile as finished and reports the progress of the running test.
+    /// </summary>
+    private async Task MarkCompletedAsync(ConcurrentDictionary<string, byte> completedIds, string indexId)
+    {
+        if (completedIds.TryAdd(indexId, 0))
+        {
+            await UpdateProgressAsync(completedIds.Count, true);
+        }
+    }
+
+    private async Task UpdateProgressAsync(int completed, bool isRunning)
+    {
+        await _progressFunc?.Invoke(new()
+        {
+            Total = _totalCount,
+            Completed = completed,
+            IsRunning = isRunning
+        });
     }
 
     private async Task UpdateGoogleRegionFunc(string indexId, string googleRegion)
